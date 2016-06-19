@@ -1,0 +1,121 @@
+/*
+    ** class  : TauTagAndProbe
+    ** author : L. Cadamuro (LLR)
+    ** date   : June 2016
+    ** brief  : select muon and tau using tag and probe selections
+*/
+
+
+#ifndef TAUTAGANDPROBEFILTER_H
+#define TAUTAGANDPROBEFILTER_H
+
+#include "FWCore/Framework/interface/EDFilter.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include <FWCore/Framework/interface/Frameworkfwd.h>
+#include <FWCore/Framework/interface/Event.h>
+#include <FWCore/Framework/interface/ESHandle.h>
+#include <FWCore/MessageLogger/interface/MessageLogger.h>
+#include <FWCore/Utilities/interface/InputTag.h>
+#include <DataFormats/PatCandidates/interface/Tau.h>
+#include <DataFormats/PatCandidates/interface/Muon.h>
+#include <DataFormats/PatCandidates/interface/MET.h>
+#include <DataFormats/PatCandidates/interface/CompositeCandidate.h>
+
+#include <iostream>
+#include <utility>
+#include <vector>
+
+using namespace edm;
+using namespace std;
+ 
+class TauTagAndProbeFilter : public edm::EDFilter {
+
+    public:
+        TauTagAndProbeFilter(const edm::ParameterSet &);
+        ~TauTagAndProbeFilter();
+
+    private:
+        bool filter(edm::Event &, edm::EventSetup const&);
+
+        float ComputeMT(math::XYZTLorentzVector visP4, const pat::MET& met);
+
+        EDGetTokenT<pat::TauRefVector>   _tausTag;
+        EDGetTokenT<pat::MuonRefVector>  _muonsTag;
+        EDGetTokenT<pat::METCollection>  _metTag;
+};
+
+TauTagAndProbeFilter::TauTagAndProbeFilter(const edm::ParameterSet & iConfig) :
+_tausTag  (consumes<pat::TauRefVector>  (iConfig.getParameter<InputTag>("taus"))),
+_muonsTag (consumes<pat::MuonRefVector> (iConfig.getParameter<InputTag>("muons"))),
+_metTag   (consumes<pat::METCollection> (iConfig.getParameter<InputTag>("met")))
+{
+    produces <pat::TauRefVector>  (); // probe
+    produces <pat::MuonRefVector> (); // tag
+}
+
+TauTagAndProbeFilter::~TauTagAndProbeFilter()
+{}
+
+bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iSetup)
+{
+    auto_ptr<pat::MuonRefVector> resultMuon ( new pat::MuonRefVector );
+    auto_ptr<pat::TauRefVector>  resultTau  ( new pat::TauRefVector  );
+
+    // ---------------------   search for the tag in the event --------------------
+    Handle<pat::MuonRefVector> muonHandle;
+    iEvent.getByToken (_muonsTag, muonHandle);
+
+    // reject events with more than 1 mu in the event (reject DY) 
+    // or without mu (should not happen in SingleMu dataset)
+    if (muonHandle->size() != 1) return false;
+
+    const pat::MuonRef mu = (*muonHandle)[0] ;
+
+    //---------------------   get the met for mt computation etc. -----------------
+    Handle<pat::METCollection> metHandle;
+    iEvent.getByToken (_metTag, metHandle);
+    const pat::MET& met = (*metHandle)[0];
+
+    float mt = ComputeMT (mu->p4(), met);
+    if (mt >= 30) return false; // reject W+jets
+
+    Handle<pat::TauRefVector> tauHandle;
+    iEvent.getByToken (_tausTag, tauHandle);
+    if (tauHandle->size() < 1) return false;    
+
+    vector<pair<float, int>> tausIdxPtVec;
+    for (uint itau = 0; itau < tauHandle->size(); ++itau)
+    {
+        const pat::TauRef tau = (*tauHandle)[itau] ;
+        math::XYZTLorentzVector pSum = mu->p4() + tau->p4();
+        if (pSum.mass() <= 40 || pSum.mass() >= 80) continue; // visible mass in (40, 80)
+        if (mu->charge() / tau->charge() > 0 ) continue; // pair must be OS
+        tausIdxPtVec.push_back(make_pair(tau->pt(), itau));
+    }
+    if (tausIdxPtVec.size() == 0) return false; 
+    if (tausIdxPtVec.size() > 1) sort (tausIdxPtVec.begin(), tausIdxPtVec.end()); // will be sorted by first idx i.e. highest pt
+    int tauIdx = tausIdxPtVec.back().second;
+    const pat::TauRef tau = (*tauHandle)[tauIdx] ;
+
+    resultTau->push_back (tau);    
+    resultMuon->push_back (mu);
+    iEvent.put(resultMuon);
+    iEvent.put(resultTau);
+
+    return true;
+}
+
+float TauTagAndProbeFilter::ComputeMT (math::XYZTLorentzVector visP4, const pat::MET& met)
+{
+    math::XYZTLorentzVector METP4 (met.px(), met.py(), 0, met.pt());   
+    float scalSum = met.pt() + visP4.pt();
+    math::XYZTLorentzVector vecSum (visP4);
+    vecSum += METP4;
+    float vecSumPt = vecSum.pt();
+    return sqrt (scalSum*scalSum - vecSumPt*vecSumPt);
+}
+
+#include <FWCore/Framework/interface/MakerMacros.h>
+DEFINE_FWK_MODULE(TauTagAndProbeFilter);
+
+#endif
