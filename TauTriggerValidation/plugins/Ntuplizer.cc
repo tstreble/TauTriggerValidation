@@ -73,19 +73,21 @@ class Ntuplizer : public edm::EDAnalyzer {
         // unsigned int _doubleMediumIsoPFTau32;
         // unsigned int _doubleMediumIsoPFTau35;
         // unsigned int _doubleMediumIsoPFTau40;
-        std::vector<std::string> _doubleMediumIsoPFTau32_filters;
-        std::vector<std::string> _doubleMediumIsoPFTau35_filters;
-        std::vector<std::string> _doubleMediumIsoPFTau40_filters;
 
+        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
+        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
+        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
+        std::vector<std::string> _filters_HLT_LooseIsoPFTau50_Trk30_eta2p1;
 
         // output variables
         float _tauPt;
         float _tauEta;
         float _tauPhi;
         float _tauEnergy;
-        int   _pass_doubleMediumIsoPFTau32;
-        int   _pass_doubleMediumIsoPFTau35;
-        int   _pass_doubleMediumIsoPFTau40;
+        int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
+        int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
+        int _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
+        int _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1;
 
 };
 
@@ -100,17 +102,22 @@ _triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getPa
     _treeName = iConfig.getParameter<std::string>("treeName");
     _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
 
-    _doubleMediumIsoPFTau32_filters = {
+    _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = {
                 "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg"
             } ;
-    _doubleMediumIsoPFTau35_filters = {
+    _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = {
                 "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg"
             } ;
-    _doubleMediumIsoPFTau40_filters = {
+    _filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = {
+                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
+                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
+                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"
+            } ;
+    _filters_HLT_LooseIsoPFTau50_Trk30_eta2p1 = {
                 "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
                 "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"
@@ -140,9 +147,10 @@ void Ntuplizer::Initialize() {
     _tauPhi    = -1.;    
     _tauEnergy = -1.;    
 
-    _pass_doubleMediumIsoPFTau32 = 0;
-    _pass_doubleMediumIsoPFTau35 = 0;
-    _pass_doubleMediumIsoPFTau40 = 0;
+    _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = 0;
+    _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = 0;
+    _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = 0;
+    _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1 = 0;
 }
 
 int  Ntuplizer::checkPathList (const std::vector<std::string>& filtersToCheck, const std::vector<std::string>& filtersList)
@@ -173,9 +181,10 @@ void Ntuplizer::beginJob()
     _tree -> Branch("tauPhi",    &_tauPhi);
     _tree -> Branch("tauEnergy", &_tauEnergy);
 
-    _tree -> Branch("pass_doubleMediumIsoPFTau32", &_pass_doubleMediumIsoPFTau32);
-    _tree -> Branch("pass_doubleMediumIsoPFTau35", &_pass_doubleMediumIsoPFTau35);
-    _tree -> Branch("pass_doubleMediumIsoPFTau40", &_pass_doubleMediumIsoPFTau40);
+    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1",         &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1);
+    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20",                  &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20);
+    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg", &_pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg);
+    _tree -> Branch("pass_HLT_LooseIsoPFTau50_Trk30_eta2p1",                    &_pass_HLT_LooseIsoPFTau50_Trk30_eta2p1);
     
     return;
 }
@@ -221,9 +230,10 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
         {
             obj.unpackPathNames(names);            
             const std::vector<std::string>& vLabels = obj.filterLabels();
-            _pass_doubleMediumIsoPFTau32 = checkPathList (_doubleMediumIsoPFTau32_filters , vLabels) ;
-            _pass_doubleMediumIsoPFTau35 = checkPathList (_doubleMediumIsoPFTau35_filters , vLabels) ;;
-            _pass_doubleMediumIsoPFTau40 = checkPathList (_doubleMediumIsoPFTau40_filters , vLabels) ;;
+            _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         , vLabels) ;
+            _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  , vLabels) ;
+            _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = checkPathList (_filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg , vLabels) ;
+            _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1                    = checkPathList (_filters_HLT_LooseIsoPFTau50_Trk30_eta2p1                    , vLabels) ;
             break;
         }
     }
