@@ -59,11 +59,21 @@ class Ntuplizer : public edm::EDAnalyzer {
         ULong64_t       _indexevents;
         Int_t           _runNumber;
         Int_t           _lumi;
-
+        Int_t     bx_;
+        Int_t npv_;
+        Int_t     nVtx_;
+        Int_t     nTrksPV_;
+        Bool_t    isPVGood_;
+        Bool_t    hasGoodVtx_;
+        float     vtx_;
+        float     vty_;
+        float     vtz_;
+  
         edm::EDGetTokenT<pat::MuonRefVector>  _muonsTag;
         edm::EDGetTokenT<pat::TauRefVector>   _tauTag;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> _triggerObjects;
         edm::EDGetTokenT<edm::TriggerResults> _triggerBits;
+        edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
 
         edm::InputTag _processName;
         HLTConfigProvider _hltConfig;
@@ -84,6 +94,7 @@ class Ntuplizer : public edm::EDAnalyzer {
         float _tauEta;
         float _tauPhi;
         float _tauEnergy;
+        int _tauDecayMode;
         int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
         int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
         int _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
@@ -99,6 +110,8 @@ _tauTag         (consumes<pat::TauRefVector>                      (iConfig.getPa
 _triggerObjects (consumes<pat::TriggerObjectStandAloneCollection> (iConfig.getParameter<edm::InputTag>("triggerSet"))),
 _triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getParameter<edm::InputTag>("triggerResultsLabel")))
 {
+
+     vtxToken_= consumes<reco::VertexCollection>     (iConfig.getParameter<edm::InputTag>("VtxLabel"));
     _treeName = iConfig.getParameter<std::string>("treeName");
     _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
 
@@ -141,11 +154,13 @@ void Ntuplizer::Initialize() {
     _indexevents = 0;
     _runNumber = 0;
     _lumi = 0;
-
+    bx_ = 0;
+    npv_ = 0;
     _tauPt     = -1.;    
     _tauEta    = -1.;    
     _tauPhi    = -1.;    
     _tauEnergy = -1.;    
+    _tauDecayMode = 0;
 
     _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = 0;
     _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = 0;
@@ -175,12 +190,22 @@ void Ntuplizer::beginJob()
     _tree -> Branch("EventNumber",&_indexevents,"EventNumber/l");
     _tree -> Branch("RunNumber",&_runNumber,"RunNumber/I");
     _tree -> Branch("lumi",&_lumi,"lumi/I");
+    _tree-> Branch("BunchCrossing",&bx_,"BunchCrossing/I");
+    _tree->Branch("npv",&npv_,"npv/I");
+    _tree->Branch("nVtx", &nVtx_);
+    _tree->Branch("nTrksPV",&nTrksPV_);
+    _tree->Branch("isPVGood",&isPVGood_);
+    _tree->Branch("hasGoodVtx",&hasGoodVtx_);
+    _tree->Branch("vtx",&vtx_);
+    _tree->Branch("vty",&vty_);
+    _tree->Branch("vtz",&vtz_);
 
     _tree -> Branch("tauPt",     &_tauPt);
     _tree -> Branch("tauEta",    &_tauEta);
     _tree -> Branch("tauPhi",    &_tauPhi);
     _tree -> Branch("tauEnergy", &_tauEnergy);
-
+    _tree -> Branch("tauDecayMode", &_tauDecayMode);
+ 
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1",         &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1);
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20",                  &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20);
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg", &_pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg);
@@ -203,24 +228,54 @@ void Ntuplizer::endRun(edm::Run const& iRun, edm::EventSetup const& iSetup)
 
 void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
 {
-
+    using namespace edm;
     Initialize();
 
     _indexevents = iEvent.id().event();
     _runNumber   = iEvent.id().run();
     _lumi        = iEvent.luminosityBlock();
+    bx_          = iEvent.bunchCrossing();
 
     // search for the tag in the event
-    edm::Handle<pat::MuonRefVector> muonHandle;
-    edm::Handle<pat::TauRefVector>  tauHandle;
-    edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
-    edm::Handle<edm::TriggerResults> triggerBits;
+    Handle<pat::MuonRefVector> muonHandle;
+    Handle<pat::TauRefVector>  tauHandle;
+    Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+    Handle<edm::TriggerResults> triggerBits;
 
     iEvent.getByToken(_muonsTag, muonHandle);
     iEvent.getByToken(_tauTag,   tauHandle);
     iEvent.getByToken(_triggerObjects, triggerObjects);
     iEvent.getByToken(_triggerBits, triggerBits);
+    
+    Handle<reco::VertexCollection> vtxHandle;
+    iEvent.getByToken(vtxToken_, vtxHandle);
+     
+    npv_ = vtxHandle->size();
 
+    nVtx_ = -1;
+    if (vtxHandle.isValid()) {
+    nVtx_ = 0;
+
+    hasGoodVtx_ = false;
+    for (uint32_t v = 0; v < vtxHandle->size(); v++) {
+    const reco::Vertex &vertex = (*vtxHandle)[v];
+    if (nVtx_ == 0) {
+        nTrksPV_ = vertex.nTracks();
+        vtx_     = vertex.x();
+        vty_     = vertex.y();
+        vtz_     = vertex.z();
+
+        isPVGood_ = false;
+        if (vertex.ndof() > 4. && fabs(vertex.z()) <= 24. && fabs(vertex.position().rho()) <= 2.) isPVGood_ = true;
+      }
+
+      if (vertex.ndof() > 4. && fabs(vertex.z()) <= 24. && fabs(vertex.position().rho()) <= 2.) hasGoodVtx_ = true;
+      nVtx_++;
+
+    }
+ } else
+    LogWarning("Ntuplizer") << "Primary vertices info not unavailable";
+    
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     const pat::TauRef tau = (*tauHandle)[0] ;
 
@@ -228,7 +283,10 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     {
         if (deltaR (*tau, obj) < 0.5)
         {
-            obj.unpackPathNames(names);            
+            obj.unpackPathNames(names);   
+            // Here we want a loop over HLT filters?
+            //     for (size_t iF = 0; iF < obj.filterLabels().size(); ++iF) {
+            //           string label = obj.filterLabels()[iF];         
             const std::vector<std::string>& vLabels = obj.filterLabels();
             _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         , vLabels) ;
             _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  , vLabels) ;
@@ -242,7 +300,7 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     _tauEta    = tau->eta();
     _tauPhi    = tau->phi();
     _tauEnergy = tau->energy();
-
+    _tauDecayMode = tau->decayMode();
     _tree -> Fill();    
 }
 

@@ -55,7 +55,8 @@ Ntuplizer = cms.EDAnalyzer("Ntuplizer",
     muons = cms.InputTag("TagAndProbe"),
     taus  = cms.InputTag("TagAndProbe"),
     triggerSet = cms.InputTag("selectedPatTrigger"),
-    triggerResultsLabel = cms.InputTag("TriggerResults", "", "HLT")
+    triggerResultsLabel = cms.InputTag("TriggerResults", "", "HLT"),
+    VtxLabel          = cms.InputTag("offlineSlimmedPrimaryVertices"),
 )
 
 TAndPseq = cms.Sequence(
