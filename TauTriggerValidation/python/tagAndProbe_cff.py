@@ -57,6 +57,7 @@ Ntuplizer = cms.EDAnalyzer("Ntuplizer",
     triggerSet = cms.InputTag("selectedPatTrigger"),
     triggerResultsLabel = cms.InputTag("TriggerResults", "", "HLT"),
     VtxLabel          = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    stage2TauSource        = cms.InputTag("caloStage2Digis","Tau")
 )
 
 TAndPseq = cms.Sequence(

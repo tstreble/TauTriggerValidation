@@ -30,10 +30,10 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
-
-
+#include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/L1Trigger/interface/BXVector.h"
+#include "DataFormats/L1Trigger/interface/Tau.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-
 
 class Ntuplizer : public edm::EDAnalyzer {
     public:
@@ -74,6 +74,7 @@ class Ntuplizer : public edm::EDAnalyzer {
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> _triggerObjects;
         edm::EDGetTokenT<edm::TriggerResults> _triggerBits;
         edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
+        edm::EDGetTokenT<BXVector <l1t::Tau> > l1Stage2TauSource_;
 
         edm::InputTag _processName;
         HLTConfigProvider _hltConfig;
@@ -89,12 +90,23 @@ class Ntuplizer : public edm::EDAnalyzer {
         std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
         std::vector<std::string> _filters_HLT_LooseIsoPFTau50_Trk30_eta2p1;
 
-        // output variables
+  // output variables
+
+        //variables for l1Taus
+        std::vector<float> _l1tauPt;
+        std::vector<float> _l1tauEta;
+        std::vector<float> _l1tauPhi;
+
         float _tauPt;
         float _tauEta;
         float _tauPhi;
         float _tauEnergy;
         int _tauDecayMode;
+
+        //storing pT of the L1 Tau/Iso Tau Candidate
+        float l1isoTauPt;
+        int l1IsoMatched;
+ 
         int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
         int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
         int _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
@@ -109,8 +121,10 @@ _muonsTag       (consumes<pat::MuonRefVector>                     (iConfig.getPa
 _tauTag         (consumes<pat::TauRefVector>                      (iConfig.getParameter<edm::InputTag>("taus"))),
 _triggerObjects (consumes<pat::TriggerObjectStandAloneCollection> (iConfig.getParameter<edm::InputTag>("triggerSet"))),
 _triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getParameter<edm::InputTag>("triggerResultsLabel")))
+//l1Stage2TauSource_(consumes<BXVector<l1t::Tau> > (iConfig.getParameter<edm::InputTag>("stage2TauSource")))
 {
 
+     l1Stage2TauSource_ = consumes<BXVector<l1t::Tau> > (iConfig.getParameter<edm::InputTag>("stage2TauSource"));
      vtxToken_= consumes<reco::VertexCollection>     (iConfig.getParameter<edm::InputTag>("VtxLabel"));
     _treeName = iConfig.getParameter<std::string>("treeName");
     _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
@@ -162,6 +176,9 @@ void Ntuplizer::Initialize() {
     _tauEnergy = -1.;    
     _tauDecayMode = 0;
 
+     l1IsoMatched = 0;
+     l1isoTauPt = -1.;
+    
     _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = 0;
     _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = 0;
     _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = 0;
@@ -205,7 +222,14 @@ void Ntuplizer::beginJob()
     _tree -> Branch("tauPhi",    &_tauPhi);
     _tree -> Branch("tauEnergy", &_tauEnergy);
     _tree -> Branch("tauDecayMode", &_tauDecayMode);
- 
+    
+    _tree->Branch("l1tauPt",&_l1tauPt);
+    _tree->Branch("l1tauEta",&_l1tauEta);
+    _tree->Branch("l1tauPhi",&_l1tauPhi);
+
+    _tree-> Branch("l1IsoTauPt",&l1isoTauPt);
+    _tree-> Branch("l1IsoMatched", &l1IsoMatched);
+
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1",         &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1);
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20",                  &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20);
     _tree -> Branch("pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg", &_pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg);
@@ -231,6 +255,11 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     using namespace edm;
     Initialize();
 
+    //cleanup from previous execution
+    _l1tauPt.clear();
+    _l1tauEta.clear();
+    _l1tauPhi.clear();
+
     _indexevents = iEvent.id().event();
     _runNumber   = iEvent.id().run();
     _lumi        = iEvent.luminosityBlock();
@@ -244,12 +273,17 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
 
     iEvent.getByToken(_muonsTag, muonHandle);
     iEvent.getByToken(_tauTag,   tauHandle);
+
     iEvent.getByToken(_triggerObjects, triggerObjects);
     iEvent.getByToken(_triggerBits, triggerBits);
     
     Handle<reco::VertexCollection> vtxHandle;
     iEvent.getByToken(vtxToken_, vtxHandle);
-     
+
+    Handle < BXVector<l1t::Tau> > stage2Taus;
+    iEvent.getByToken(l1Stage2TauSource_,stage2Taus);
+   
+    //number of primary vertices 
     npv_ = vtxHandle->size();
 
     nVtx_ = -1;
@@ -295,12 +329,32 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
             break;
         }
     }
+    if (tauHandle->size()>0){
+ 	double deltaR_ = 0.5;
 
     _tauPt     = tau->pt();
     _tauEta    = tau->eta();
     _tauPhi    = tau->phi();
     _tauEnergy = tau->energy();
     _tauDecayMode = tau->decayMode();
+
+    //Looping over L1 Taus and matching them with tau candidate chosen above
+     for(uint32_t k = 0; k<stage2Taus->size(); k++){
+        const l1t::Tau &L1Tau = (*stage2Taus)[k];
+
+	_l1tauPt.push_back(L1Tau.pt());
+        _l1tauEta.push_back(L1Tau.eta());
+        _l1tauPhi.push_back( L1Tau.phi());
+
+	double dR = deltaR( tau->p4(), L1Tau.p4()); //matching condition
+
+	if( dR < deltaR_){
+	  l1isoTauPt  = L1Tau.pt();
+	  l1IsoMatched = 1;
+	  break;
+	}
+      }
+}
     _tree -> Fill();    
 }
 
