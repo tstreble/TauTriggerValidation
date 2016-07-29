@@ -12,7 +12,9 @@ process.load('TauTriggerValidation.TauTriggerValidation.tagAndProbe_cff')
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/082EC2A0-4C28-E611-BC61-02163E014412.root'
+    #     '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v1/000/272/760/00000/68B88794-7015-E611-8A92-02163E01366C.root'
+         '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v1/000/273/017/00000/88722B6F-6419-E611-A131-02163E01236F.root'
+    #    '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/082EC2A0-4C28-E611-BC61-02163E014412.root'
     #    '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/1014078C-4C28-E611-85FB-02163E0141C1.root',
     #    '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/203E5176-4C28-E611-B4F8-02163E014743.root',
     #    '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/32508866-4C28-E611-A38D-02163E011BAF.root',
@@ -37,4 +39,4 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 5000
 
 # Adding ntuplizer
-process.TFileService=cms.Service('TFileService',fileName=cms.string('NTuple.root'))
+process.TFileService=cms.Service('TFileService',fileName=cms.string('NTuple_SingleMuon2016B_v1.root'))

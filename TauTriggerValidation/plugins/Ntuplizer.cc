@@ -4,6 +4,7 @@
 /*
     ** class   : Ntuplizer
     ** author  : S. Bologna (Milano-Bicocca)
+    updated by: Usama Hussain
     ** date    : June 2016
     ** brief   : match tau probe to trigger filter and save results into a root TTree
 */
