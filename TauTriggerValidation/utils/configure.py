@@ -48,16 +48,21 @@ if __name__ == "__main__":
         pipe = Popen(command, shell=True, stdout=PIPE)
         for line in pipe.stdout:
             filelist.append (line.strip())
-        print "... found " , len(filelist) , " files in the run range"
+        print "    > found " , len(filelist) , " files in the run range"
     
     ################### mask the JSON (if any provided) by the run range
     skimmedJSON = {}
     if args.jsonFile:
+        print "... using JSON file: " , args.jsonFile
         try: json = eval( open(args.jsonFile).read() )
         except:
             print "** Error: json" , args.jsonFile , "not a valid JSON"
             sys.exit()
+        print "    > doing intersection with run range " , args.runrange[0] , args.runrange[1]
         skimmedJSON = dict ([ (key, value)  for key, value in json.iteritems() if key >= args.runrange[0] and key <= args.runrange[1] ])
-    # print skimmedJSON
+        # print skimmedJSON
+        if len(skimmedJSON) == 0:
+            print "** Error: json " , args.jsonFile , " has no intersection with run range" , args.runrange[0] , args.runrange[1]
+            sys.exit()
 
     
