@@ -3,12 +3,13 @@
 
 import argparse
 import os, sys
+import json
 from subprocess import Popen, PIPE
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Command line parser')
     parser.add_argument('--json',          dest='jsonFile',     help='json file name',                              default=None)
-    parser.add_argument('--tag',           dest='tag',          help='tag defining this process',                   default="tau")
+    parser.add_argument('--tag',           dest='tag',          help='tag defining this process',                   default=None)
     parser.add_argument('--dataset',       dest='dataset',      help='dataset to run validation on',                default="/SingleMuon/Run2016B-PromptReco-v2/MINIAOD")
     parser.add_argument('--userfilelist',  dest='userfilelist', help='user list of input files (no DAS query)',     default="/SingleMuon/Run2016B-PromptReco-v2/MINIAOD")
     parser.add_argument('--run-range',     dest='runrange',     help='first and last runs to be analyzed', nargs=2, default=None)
@@ -18,6 +19,15 @@ if __name__ == "__main__":
     if not args.runrange:
         print "** Error: please provide run range"
         sys.exit()
+
+    ################### prepare the workspace
+    if not args.tag:
+        print "** Error: please provide a task tag name"
+        sys.exit()
+    if os.path.isdir(args.tag):
+        print "** Error: folder " , args.tag , "already exists"
+        sys.exit()
+    os.system ('mkdir %s' % args.tag)
 
     ################### list all files to be processed
     filelist = []
@@ -65,4 +75,21 @@ if __name__ == "__main__":
             print "** Error: json " , args.jsonFile , " has no intersection with run range" , args.runrange[0] , args.runrange[1]
             sys.exit()
 
+    ################### split by input number of jobs in input (TBD)
+
+    ################### prepare input to each job passing as command line parameters
+    # save JSON as txt
+    if args.jsonFile:
+        jsonName = args.tag + "/json_" + args.runrange[0] + "_" + args.runrange[1] + ".txt"
+        fJSON = open (jsonName, 'w')
+        fJSON.write('{')
+        idx = 0
+        for elem in skimmedJSON:
+            fJSON.write ('\"' + elem + '\": ' + str(skimmedJSON[elem]))
+            if idx == len(skimmedJSON) -1:
+                fJSON.write("}")
+            else:
+                fJSON.write(",\n")
+            idx += 1
+        fJSON.close()
     
