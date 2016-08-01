@@ -4,7 +4,7 @@ import FWCore.ParameterSet.Config as cms
 import HLTrigger.HLTfilters.hltHighLevel_cfi as hlt
 hltFilter = hlt.hltHighLevel.clone(
     TriggerResultsTag = cms.InputTag("TriggerResults","","HLT"),
-    HLTPaths = ['HLT_IsoMu20_v*'],
+    HLTPaths = ['HLT_IsoMu22_v*'],
     andOr = cms.bool(True), # how to deal with multiple triggers: True (OR) accept if ANY is true, False (AND) accept if ALL are true
     throw = cms.bool(True) #if True: throws exception if a trigger path is invalid  
 )
@@ -13,7 +13,7 @@ hltFilter = hlt.hltHighLevel.clone(
 goodMuons = cms.EDFilter("PATMuonRefSelector",
         src = cms.InputTag("slimmedMuons"),
         cut = cms.string(
-                'pt > 10 && abs(eta) < 2.1 ' # kinematics
+                'pt > 24 && abs(eta) < 2.1 ' # kinematics
                 '&& ( (pfIsolationR03().sumChargedHadronPt + max(pfIsolationR03().sumNeutralHadronEt + pfIsolationR03().sumPhotonEt - 0.5 * pfIsolationR03().sumPUPt, 0.0)) / pt() ) < 0.1 ' # isolation
                 '&& isMediumMuon()' # quality -- medium muon
         ),
