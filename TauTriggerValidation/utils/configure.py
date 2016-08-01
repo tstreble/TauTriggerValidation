@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument('--json',          dest='jsonFile',     help='json file name',                              default=None)
     parser.add_argument('--tag',           dest='tag',          help='tag defining this process',                   default=None)
     parser.add_argument('--dataset',       dest='dataset',      help='dataset to run validation on',                default="/SingleMuon/Run2016B-PromptReco-v2/MINIAOD")
-    parser.add_argument('--userfilelist',  dest='userfilelist', help='user list of input files (no DAS query)',     default="/SingleMuon/Run2016B-PromptReco-v2/MINIAOD")
+    parser.add_argument('--userfilelist',  dest='userfilelist', help='user list of input files (no DAS query)',     default=None)
     parser.add_argument('--run-range',     dest='runrange',     help='first and last runs to be analyzed', nargs=2, default=None)
     args = parser.parse_args()
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     ################### list all files to be processed
     filelist = []
-    if not args.userfilelist:
+    if args.userfilelist:
         print "... using user file list" , args.userfilelist
         try: ff = open(args.userfilelist)
         except :
@@ -75,8 +75,6 @@ if __name__ == "__main__":
             print "** Error: json " , args.jsonFile , " has no intersection with run range" , args.runrange[0] , args.runrange[1]
             sys.exit()
 
-    ################### split by input number of jobs in input (TBD)
-
     ################### prepare input to each job passing as command line parameters
     # save JSON as txt
     if args.jsonFile:
@@ -92,4 +90,11 @@ if __name__ == "__main__":
                 fJSON.write(",\n")
             idx += 1
         fJSON.close()
+
+    # save file list to file - TBD: split into multiple file list for batch submission
+    fileListFile = args.tag + "/filelist.txt"
+    fFileList = open (fileListFile, 'w')
+    for l in filelist:
+        fFileList.write(l+'\n')
+    fFileList.close()
     
