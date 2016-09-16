@@ -1,13 +1,6 @@
 #ifndef NTUPLIZER_H
 #define NTUPLIZER_H
 
-/*
-    ** class   : Ntuplizer
-    ** author  : S. Bologna (Milano-Bicocca)
-    ** date    : June 2016
-    ** brief   : match tau probe to trigger filter and save results into a root TTree
-*/
-
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -16,10 +9,11 @@
 #include <vector>
 #include <utility>
 #include <TNtuple.h>
+#include <TString.h>
+#include <bitset>
 
 
 #include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include <FWCore/Framework/interface/Frameworkfwd.h>
 #include <FWCore/Framework/interface/Event.h>
@@ -30,18 +24,34 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+#include "DataFormats/L1Trigger/interface/Tau.h"
 
+
+#include "tParameterSet.h"
 
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
+
+
+//Set this variable to decide the number of triggers that you want to check simultaneously
+#define NUMBER_OF_MAXIMUM_TRIGGERS 64
+
+
+/*
+██████  ███████  ██████ ██       █████  ██████   █████  ████████ ██  ██████  ███    ██
+██   ██ ██      ██      ██      ██   ██ ██   ██ ██   ██    ██    ██ ██    ██ ████   ██
+██   ██ █████   ██      ██      ███████ ██████  ███████    ██    ██ ██    ██ ██ ██  ██
+██   ██ ██      ██      ██      ██   ██ ██   ██ ██   ██    ██    ██ ██    ██ ██  ██ ██
+██████  ███████  ██████ ███████ ██   ██ ██   ██ ██   ██    ██    ██  ██████  ██   ████
+*/
 
 class Ntuplizer : public edm::EDAnalyzer {
     public:
         /// Constructor
         explicit Ntuplizer(const edm::ParameterSet&);
         /// Destructor
-        virtual ~Ntuplizer();  
-        
+        virtual ~Ntuplizer();
+
     private:
         //----edm control---
         virtual void beginJob() ;
@@ -49,97 +59,96 @@ class Ntuplizer : public edm::EDAnalyzer {
         virtual void analyze(const edm::Event&, const edm::EventSetup&);
         virtual void endJob();
         virtual void endRun(edm::Run const&, edm::EventSetup const&);
-        int  checkPathList (const std::vector<std::string>& filtersToCheck, const std::vector<std::string>& filtersList) ;
-        void Initialize(); 
-        
+        void Initialize();
+        bool hasFilters(const pat::TriggerObjectStandAlone&  obj , const std::vector<std::string>& filtersToLookFor);
+
         TTree *_tree;
+        TTree *_triggerNamesTree;
         std::string _treeName;
         // -------------------------------------
         // variables to be filled in output tree
         ULong64_t       _indexevents;
         Int_t           _runNumber;
         Int_t           _lumi;
-        Int_t     bx_;
-        Int_t npv_;
-        Int_t     nVtx_;
-        Int_t     nTrksPV_;
-        Bool_t    isPVGood_;
-        Bool_t    hasGoodVtx_;
-        float     vtx_;
-        float     vty_;
-        float     vtz_;
-  
+        unsigned long _tauTriggerBits;
+        float _tauPt;
+        float _tauEta;
+        float _tauPhi;
+        float _hltPt;
+        float _hltEta;
+        float _hltPhi;
+        int _l1tQual;
+        float _l1tPt;
+        float _l1tEta;
+        float _l1tPhi;
+        int _l1tIso;
+        Bool_t _hasTriggerMuonType;
+        Bool_t _hasTriggerTauType;
+        Bool_t _isMatched;
+        Bool_t _isOS;
+        int _foundJet;
+
         edm::EDGetTokenT<pat::MuonRefVector>  _muonsTag;
         edm::EDGetTokenT<pat::TauRefVector>   _tauTag;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> _triggerObjects;
         edm::EDGetTokenT<edm::TriggerResults> _triggerBits;
-        edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
+        edm::EDGetTokenT<l1t::TauBxCollection> _L1TauTag  ;
+
+        //!Contains the parameters
+        tVParameterSet _parameters;
 
         edm::InputTag _processName;
+        //! Maximum
+        std::bitset<NUMBER_OF_MAXIMUM_TRIGGERS> _tauTriggerBitSet;
+
+
+
         HLTConfigProvider _hltConfig;
 
-        // set of path names to be saved
-        // will be saved bitwise, according to position of the searched string into the vector
-        // unsigned int _doubleMediumIsoPFTau32;
-        // unsigned int _doubleMediumIsoPFTau35;
-        // unsigned int _doubleMediumIsoPFTau40;
-
-        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
-        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
-        std::vector<std::string> _filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
-        std::vector<std::string> _filters_HLT_LooseIsoPFTau50_Trk30_eta2p1;
-
-        // output variables
-        float _tauPt;
-        float _tauEta;
-        float _tauPhi;
-        float _tauEnergy;
-        int _tauDecayMode;
-        int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1;
-        int _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20;
-        int _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg;
-        int _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1;
 
 };
 
+/*
+██ ███    ███ ██████  ██      ███████ ███    ███ ███████ ███    ██ ████████  █████  ████████ ██  ██████  ███    ██
+██ ████  ████ ██   ██ ██      ██      ████  ████ ██      ████   ██    ██    ██   ██    ██    ██ ██    ██ ████   ██
+██ ██ ████ ██ ██████  ██      █████   ██ ████ ██ █████   ██ ██  ██    ██    ███████    ██    ██ ██    ██ ██ ██  ██
+██ ██  ██  ██ ██      ██      ██      ██  ██  ██ ██      ██  ██ ██    ██    ██   ██    ██    ██ ██    ██ ██  ██ ██
+██ ██      ██ ██      ███████ ███████ ██      ██ ███████ ██   ████    ██    ██   ██    ██    ██  ██████  ██   ████
+*/
 
 // ----Constructor and Destructor -----
 Ntuplizer::Ntuplizer(const edm::ParameterSet& iConfig) :
 _muonsTag       (consumes<pat::MuonRefVector>                     (iConfig.getParameter<edm::InputTag>("muons"))),
 _tauTag         (consumes<pat::TauRefVector>                      (iConfig.getParameter<edm::InputTag>("taus"))),
 _triggerObjects (consumes<pat::TriggerObjectStandAloneCollection> (iConfig.getParameter<edm::InputTag>("triggerSet"))),
-_triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getParameter<edm::InputTag>("triggerResultsLabel")))
+_triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getParameter<edm::InputTag>("triggerResultsLabel"))),
+_L1TauTag       (consumes<l1t::TauBxCollection>                   (iConfig.getParameter<edm::InputTag>("L1Tau")))
 {
+    this -> _treeName = iConfig.getParameter<std::string>("treeName");
+    this -> _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
 
-     vtxToken_= consumes<reco::VertexCollection>     (iConfig.getParameter<edm::InputTag>("VtxLabel"));
-    _treeName = iConfig.getParameter<std::string>("treeName");
-    _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
+    TString triggerName;
+    edm::Service<TFileService> fs;
+    this -> _triggerNamesTree = fs -> make<TTree>("triggerNames", "triggerNames");
+    this -> _triggerNamesTree -> Branch("triggerNames",&triggerName);
 
-    _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = {
-                "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau32Reg"
-            } ;
-    _filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = {
-                "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau35Reg"
-            } ;
-    _filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = {
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"
-            } ;
-    _filters_HLT_LooseIsoPFTau50_Trk30_eta2p1 = {
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg",
-                "hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"
-            } ;
-    // FIXME !! previous names are dummy . Need to initialized the with L2, L2.5 and L3 (final) filter names.
-    // in principle can accept as many filter names as desired.
-    // They will be stored bitwise (i.e., _diTau32_filters.at(0) will be in bit 0 of pass_diTau32)
+    //Building the trigger arrays
+    const std::vector<edm::ParameterSet>& HLTList = iConfig.getParameter <std::vector<edm::ParameterSet> > ("triggerList");
+    for (const edm::ParameterSet& parameterSet : HLTList) {
+        tParameterSet pSet;
+        pSet.hltPath = parameterSet.getParameter<std::string>("HLT");
+        triggerName = pSet.hltPath;
+        pSet.hltFilters1 = parameterSet.getParameter<std::vector<std::string> >("path1");
+        pSet.hltFilters2 = parameterSet.getParameter<std::vector<std::string> >("path2");
+        pSet.leg1 = parameterSet.getParameter<int>("leg1");
+        pSet.leg2 = parameterSet.getParameter<int>("leg2");
+        this -> _parameters.push_back(pSet);
 
-    Initialize();
+        this -> _triggerNamesTree -> Fill();
+    }
+
+
+    this -> Initialize();
     return;
 }
 
@@ -147,70 +156,79 @@ Ntuplizer::~Ntuplizer()
 {}
 
 void Ntuplizer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup)
-{}
+{
+    Bool_t changedConfig = false;
+
+    if(!this -> _hltConfig.init(iRun, iSetup, this -> _processName.process(), changedConfig)){
+        edm::LogError("HLTMatchingFilter") << "Initialization of HLTConfigProvider failed!!";
+        return;
+    }
+
+    const edm::TriggerNames::Strings& triggerNames = this -> _hltConfig.triggerNames();
+    //std::cout << " ===== LOOKING FOR THE PATH INDEXES =====" << std::endl;
+    for (tParameterSet& parameter : this -> _parameters){
+        const std::string& hltPath = parameter.hltPath;
+        bool found = false;
+        for(unsigned int j=0; j < triggerNames.size(); j++)
+        {
+            //std::cout << triggerNames[j] << std::endl;
+            if (triggerNames[j].find(hltPath) != std::string::npos) {
+                found = true;
+                parameter.hltPathIndex = j;
+
+                //std::cout << "### FOUND AT INDEX #" << j << " --> " << triggerNames[j] << std::endl;
+            }
+        }
+        if (!found) parameter.hltPathIndex = -1;
+    }
+
+}
 
 void Ntuplizer::Initialize() {
-    
-    _indexevents = 0;
-    _runNumber = 0;
-    _lumi = 0;
-    bx_ = 0;
-    npv_ = 0;
-    _tauPt     = -1.;    
-    _tauEta    = -1.;    
-    _tauPhi    = -1.;    
-    _tauEnergy = -1.;    
-    _tauDecayMode = 0;
-
-    _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1 = 0;
-    _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20 = 0;
-    _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = 0;
-    _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1 = 0;
+    this -> _indexevents = 0;
+    this -> _runNumber = 0;
+    this -> _lumi = 0;
+    this -> _tauPt = -1.;
+    this -> _isMatched = false;
+    this -> _hltPt = -1;
+    this -> _hltEta = 666;
+    this -> _hltPhi = 666;
+    this -> _l1tPt = -1;
+    this -> _l1tEta = 666;
+    this -> _l1tPhi = 666;
+    this -> _l1tQual = -1;
+    this -> _l1tIso = -1;
+    this -> _foundJet = 0;
 }
 
-int  Ntuplizer::checkPathList (const std::vector<std::string>& filtersToCheck, const std::vector<std::string>& filtersList)
-{
-    int flags = 0;
-    for (std::string label : filtersList)
-    {
-        for (uint ifilter = 0; ifilter < filtersToCheck.size(); ++ifilter)
-        {
-            if (label == filtersToCheck.at(ifilter)) flags |= (1 << ifilter) ;
-        }
-    }
-    return flags;
-}
 
 void Ntuplizer::beginJob()
 {
     edm::Service<TFileService> fs;
-    _tree = fs -> make<TTree>(_treeName.c_str(), _treeName.c_str());
+    this -> _tree = fs -> make<TTree>(this -> _treeName.c_str(), this -> _treeName.c_str());
 
     //Branches
-    _tree -> Branch("EventNumber",&_indexevents,"EventNumber/l");
-    _tree -> Branch("RunNumber",&_runNumber,"RunNumber/I");
-    _tree -> Branch("lumi",&_lumi,"lumi/I");
-    _tree-> Branch("BunchCrossing",&bx_,"BunchCrossing/I");
-    _tree->Branch("npv",&npv_,"npv/I");
-    _tree->Branch("nVtx", &nVtx_);
-    _tree->Branch("nTrksPV",&nTrksPV_);
-    _tree->Branch("isPVGood",&isPVGood_);
-    _tree->Branch("hasGoodVtx",&hasGoodVtx_);
-    _tree->Branch("vtx",&vtx_);
-    _tree->Branch("vty",&vty_);
-    _tree->Branch("vtz",&vtz_);
+    this -> _tree -> Branch("EventNumber",&_indexevents,"EventNumber/l");
+    this -> _tree -> Branch("RunNumber",&_runNumber,"RunNumber/I");
+    this -> _tree -> Branch("lumi",&_lumi,"lumi/I");
+    this -> _tree -> Branch("tauTriggerBits", &_tauTriggerBits, "tauTriggerBits/l");
+    this -> _tree -> Branch("tauPt",  &_tauPt,  "tauPt/F");
+    this -> _tree -> Branch("tauEta", &_tauEta, "tauEta/F");
+    this -> _tree -> Branch("tauPhi", &_tauPhi, "tauPhi/F");
+    this -> _tree -> Branch("hltPt",  &_hltPt,  "hltPt/F");
+    this -> _tree -> Branch("hltEta", &_hltEta, "hltEta/F");
+    this -> _tree -> Branch("hltPhi", &_hltPhi, "hltPhi/F");
+    this -> _tree -> Branch("l1tPt",  &_l1tPt,  "l1tPt/F");
+    this -> _tree -> Branch("l1tEta", &_l1tEta, "l1tEta/F");
+    this -> _tree -> Branch("l1tPhi", &_l1tPhi, "l1tPhi/F");
+    this -> _tree -> Branch("l1tQual", &_l1tQual, "l1tQual/I");
+    this -> _tree -> Branch("l1tIso", &_l1tIso, "l1tIso/I");
+    this -> _tree -> Branch("hasTriggerMuonType", &_hasTriggerMuonType, "hasTriggerMuonType/O");
+    this -> _tree -> Branch("hasTriggerTauType", &_hasTriggerTauType, "hasTriggerTauType/O");
+    this -> _tree -> Branch("isMatched", &_isMatched, "isMatched/O");
+    this -> _tree -> Branch("isOS", &_isOS, "isOS/O");
+    this -> _tree -> Branch("foundJet", &_foundJet, "foundJet/I");
 
-    _tree -> Branch("tauPt",     &_tauPt);
-    _tree -> Branch("tauEta",    &_tauEta);
-    _tree -> Branch("tauPhi",    &_tauPhi);
-    _tree -> Branch("tauEnergy", &_tauEnergy);
-    _tree -> Branch("tauDecayMode", &_tauDecayMode);
- 
-    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1",         &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1);
-    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20",                  &_pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20);
-    _tree -> Branch("pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg", &_pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg);
-    _tree -> Branch("pass_HLT_LooseIsoPFTau50_Trk30_eta2p1",                    &_pass_HLT_LooseIsoPFTau50_Trk30_eta2p1);
-    
     return;
 }
 
@@ -226,83 +244,139 @@ void Ntuplizer::endRun(edm::Run const& iRun, edm::EventSetup const& iSetup)
     return;
 }
 
+
 void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
 {
-    using namespace edm;
-    Initialize();
+    this -> Initialize();
 
     _indexevents = iEvent.id().event();
-    _runNumber   = iEvent.id().run();
-    _lumi        = iEvent.luminosityBlock();
-    bx_          = iEvent.bunchCrossing();
+    _runNumber = iEvent.id().run();
+    _lumi = iEvent.luminosityBlock();
+
+    // std::auto_ptr<pat::MuonRefVector> resultMuon(new pat::MuonRefVector);
 
     // search for the tag in the event
-    Handle<pat::MuonRefVector> muonHandle;
-    Handle<pat::TauRefVector>  tauHandle;
-    Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
-    Handle<edm::TriggerResults> triggerBits;
+    edm::Handle<pat::MuonRefVector> muonHandle;
+    edm::Handle<pat::TauRefVector>  tauHandle;
+    edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+    edm::Handle<edm::TriggerResults> triggerBits;
 
-    iEvent.getByToken(_muonsTag, muonHandle);
-    iEvent.getByToken(_tauTag,   tauHandle);
-    iEvent.getByToken(_triggerObjects, triggerObjects);
-    iEvent.getByToken(_triggerBits, triggerBits);
-    
-    Handle<reco::VertexCollection> vtxHandle;
-    iEvent.getByToken(vtxToken_, vtxHandle);
-     
-    npv_ = vtxHandle->size();
+    iEvent.getByToken(this -> _muonsTag, muonHandle);
+    iEvent.getByToken(this -> _tauTag,   tauHandle);
+    iEvent.getByToken(this -> _triggerObjects, triggerObjects);
+    iEvent.getByToken(this -> _triggerBits, triggerBits);
 
-    nVtx_ = -1;
-    if (vtxHandle.isValid()) {
-    nVtx_ = 0;
 
-    hasGoodVtx_ = false;
-    for (uint32_t v = 0; v < vtxHandle->size(); v++) {
-    const reco::Vertex &vertex = (*vtxHandle)[v];
-    if (nVtx_ == 0) {
-        nTrksPV_ = vertex.nTracks();
-        vtx_     = vertex.x();
-        vty_     = vertex.y();
-        vtz_     = vertex.z();
-
-        isPVGood_ = false;
-        if (vertex.ndof() > 4. && fabs(vertex.z()) <= 24. && fabs(vertex.position().rho()) <= 2.) isPVGood_ = true;
-      }
-
-      if (vertex.ndof() > 4. && fabs(vertex.z()) <= 24. && fabs(vertex.position().rho()) <= 2.) hasGoodVtx_ = true;
-      nVtx_++;
-
-    }
- } else
-    LogWarning("Ntuplizer") << "Primary vertices info not unavailable";
-    
+//! TagAndProbe on HLT taus
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     const pat::TauRef tau = (*tauHandle)[0] ;
+    const pat::MuonRef muon = (*muonHandle)[0] ;
 
-    for (pat::TriggerObjectStandAlone obj : *triggerObjects)
+    this -> _isOS = (muon -> charge() / tau -> charge() < 0) ? true : false;
+
+    this -> _tauTriggerBitSet.reset();
+
+
+
+    for (pat::TriggerObjectStandAlone  obj : *triggerObjects)
     {
-        if (deltaR (*tau, obj) < 0.5)
+        const float dR = deltaR (*tau, obj);
+        if ( dR < 0.5)
         {
-            obj.unpackPathNames(names);   
-            // Here we want a loop over HLT filters?
-            //     for (size_t iF = 0; iF < obj.filterLabels().size(); ++iF) {
-            //           string label = obj.filterLabels()[iF];         
-            const std::vector<std::string>& vLabels = obj.filterLabels();
-            _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1         , vLabels) ;
-            _pass_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  = checkPathList (_filters_HLT_IsoMu19_eta2p1_LooseIsoPFTau20                  , vLabels) ;
-            _pass_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg = checkPathList (_filters_HLT_IsoMu19_eta2p1_MediumIsoPFTau35_Trk1_eta2p1_Reg , vLabels) ;
-            _pass_HLT_LooseIsoPFTau50_Trk30_eta2p1                    = checkPathList (_filters_HLT_LooseIsoPFTau50_Trk30_eta2p1                    , vLabels) ;
-            break;
+            this -> _isMatched = true;
+            this -> _hasTriggerTauType = obj.hasTriggerObjectType(trigger::TriggerTau);
+            this -> _hasTriggerMuonType = obj.hasTriggerObjectType(trigger::TriggerMuon);
+
+            obj.unpackPathNames(names);
+            const edm::TriggerNames::Strings& triggerNames = names.triggerNames();
+            //Looking for the path
+            unsigned int x = 0;
+            bool foundTrigger = false;
+            for (const tParameterSet& parameter : this -> _parameters)
+            {
+                if ((parameter.hltPathIndex >= 0)&&(obj.hasPathName(triggerNames[parameter.hltPathIndex], true, false)))
+                {
+                    foundTrigger = true;
+                    //Path found, now looking for the label 1, if present in the parameter set
+                    //std::cout << "==== FOUND PATH " << triggerNames[parameter.hltPathIndex] << " ====" << std::endl;
+                    //Retrieving filter list for the event
+                    const std::vector<std::string>& filters = (parameter.leg1 == 15)? (parameter.hltFilters1):(parameter.hltFilters2);
+                    if (this -> hasFilters(obj, filters))
+                    {
+                        //std::cout << "#### FOUND TAU WITH HLT PATH " << x << " ####" << std::endl;
+                        this -> _hltPt = obj.pt();
+                        this -> _hltEta = obj.eta();
+                        this -> _hltPhi = obj.phi();
+                        this -> _tauTriggerBitSet[x] = true;
+                        //std::cout << this -> _tauTriggerBitSet.to_string() << std::endl;
+                    }
+                }
+                x++;
+            }
+            if (foundTrigger) this -> _foundJet++;
         }
     }
 
-    _tauPt     = tau->pt();
-    _tauEta    = tau->eta();
-    _tauPhi    = tau->phi();
-    _tauEnergy = tau->energy();
-    _tauDecayMode = tau->decayMode();
-    _tree -> Fill();    
+
+    //! TagAndProbe on L1T taus
+
+    edm::Handle< BXVector<l1t::Tau> >  L1TauHandle;
+    iEvent.getByToken(_L1TauTag, L1TauHandle);
+
+    float minDR = 0.5; //Uncomment for new match algo
+
+    for (l1t::TauBxCollection::const_iterator bx0TauIt = L1TauHandle->begin(0); bx0TauIt != L1TauHandle->end(0) ; bx0TauIt++)
+    {
+        const float dR = deltaR(*tau, *bx0TauIt);
+        if (dR < minDR) //Uncomment for new match algo
+        //if (dR < 0.5) //Uncomment for old match algo
+        {
+            minDR = dR; //Uncomment for new match algo
+            const l1t::Tau& l1tTau = *bx0TauIt;
+            this -> _l1tPt = l1tTau.pt();
+            this -> _l1tEta = l1tTau.eta();
+            this -> _l1tPhi = l1tTau.phi();
+            this -> _l1tIso = l1tTau.hwIso();
+            this -> _l1tQual = l1tTau.hwQual();
+        }
+    }
+
+    this -> _tauPt = tau -> pt();
+    this -> _tauEta = tau -> eta();
+    this -> _tauPhi = tau -> phi();
+
+    //float deltaPt = this -> _hltPt - this -> _tauPt;
+    //if (this -> _foundJet > 1 ) std::cout << "deltaPt: " << deltaPt << " con foundJet " << this -> _foundJet << " hltPt " << this -> _hltPt << endl;
+
+    this -> _tauTriggerBits = this -> _tauTriggerBitSet.to_ulong();
+    //std::cout << "++++++++++ FILL ++++++++++" << std::endl;
+    this -> _tree -> Fill();
+
 }
+
+bool Ntuplizer::hasFilters(const pat::TriggerObjectStandAlone&  obj , const std::vector<std::string>& filtersToLookFor) {
+
+    const std::vector<std::string>& eventLabels = obj.filterLabels();
+    for (const std::string& filter : filtersToLookFor)
+    {
+        //Looking for matching filters
+        bool found = false;
+        for (const std::string& label : eventLabels)
+        {
+            //if (label == std::string("hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"))
+            if (label == filter)
+            {
+
+                //std::cout << "#### FOUND FILTER " << label << " == " << filter << " ####" << std::endl;
+                found = true;
+            }
+        }
+        if(!found) return false;
+    }
+
+    return true;
+}
+
 
 #include <FWCore/Framework/interface/MakerMacros.h>
 DEFINE_FWK_MODULE(Ntuplizer);
