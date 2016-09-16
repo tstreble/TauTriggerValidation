@@ -45,10 +45,6 @@ process.source = cms.Source("PoolSource",
     )
 )
 
-process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10000)
-)
-
 if options.JSONfile:
     print "Using JSON: " , options.JSONfile
     process.source.lumisToProcess = LumiList.LumiList(filename = options.JSONfile).getVLuminosityBlockRange()
