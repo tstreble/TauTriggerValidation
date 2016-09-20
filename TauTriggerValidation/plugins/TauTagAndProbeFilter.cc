@@ -136,7 +136,7 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
 
     if (tausIdxPtVec.size() == 0) return false; //No tau found
     if (tausIdxPtVec.size() > 1) sort (tausIdxPtVec.begin(), tausIdxPtVec.end()); //Sort if multiple taus
-    int tauIdx = tausIdxPtVec.at(0).second; // min iso
+    int tauIdx = tausIdxPtVec.back().second; // min iso --> max MVA score
     tau = (*tauHandle)[tauIdx];
 
     resultTau->push_back (tau);
