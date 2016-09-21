@@ -25,8 +25,14 @@ config.JobType.psetName = 'test.py'
 config.section_('Data') 
 config.Data.inputDBS = 'global'
 config.Data.splitting = 'LumiBased'
-config.Data.lumiMask = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/Cert_271036-279931_13TeV_PromptReco_Collisions16_JSON_NoL1T.txt'
-config.Data.runRange = '276831-279931'
+JSON = {
+  'json1': '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/Cert_271036-279931_13TeV_PromptReco_Collisions17_JSON_NoL1T.txt',
+  'json2': '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/DCSOnly/json_DCSONLY.txt'	
+}
+listOfJSONs = ['json1','json2']
+for json in listOfJSONs:
+	config.Data.lumiMask = JSON[json]
+config.Data.runRange = '276831-280385'
 #Already submitted:
 listOfSamples = ['dataset1','dataset2','dataset3']
 for sample in listOfSamples:  
