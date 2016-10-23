@@ -50,8 +50,22 @@ HLTLIST = cms.VPSet(
     ),
     cms.PSet (
         HLT = cms.string("HLT_IsoMu21_eta2p1_MediumIsoPFTau32_Trk1_eta2p1_Reg_v"),
-        path1 = cms.vstring ("hltL3crIsoL1sMu20L1f0L2f10QL3f20QL3trkIsoFiltered0p09", "hltOverlapFilterIsoMu21MediumIsoPFTau32Reg"),
-        path2 = cms.vstring ("HLT_IsoMu21_eta2p1_MediumIsoPFTau32_Trk1_eta2p1_Reg_v*", "hltOverlapFilterIsoMu21MediumIsoPFTau32Reg"),
+        path1 = cms.vstring ("hltL3crIsoL1sMu20erIsoTau26erL1f0L2f10QL3f21QL3trkIsoFiltered0p09", "hltOverlapFilterIsoMu21MediumIsoPFTau32Reg"),
+        path2 = cms.vstring ("hltPFTau32TrackPt1MediumIsolationL1HLTMatchedReg", "hltOverlapFilterIsoMu21MediumIsoPFTau32Reg"),
+        leg1 = cms.int32(13),
+        leg2 = cms.int32(15)
+    ),
+    cms.PSet (
+        HLT = cms.string("HLT_IsoMu19_eta2p1_MediumCombinedIsoPFTau32_Trk1_eta2p1_Reg_v"),
+        path1 = cms.vstring ("hltL3crIsoL1sMu18erIsoTau26erL1f0L2f10QL3f19QL3trkIsoFiltered0p09", "hltOverlapFilterIsoMu19MediumCombinedIsoPFTau32Reg"),
+        path2 = cms.vstring ("hltPFTau32TrackPt1MediumCombinedIsolationL1HLTMatchedReg", "hltOverlapFilterIsoMu19MediumCombinedIsoPFTau32Reg"),
+        leg1 = cms.int32(13),
+        leg2 = cms.int32(15)
+    ),
+    cms.PSet (
+        HLT = cms.string("HLT_IsoMu21_eta2p1_MediumCombinedIsoPFTau32_Trk1_eta2p1_Reg_v"),
+        path1 = cms.vstring ("hltL3crIsoL1sMu20erIsoTau26erL1f0L2f10QL3f21QL3trkIsoFiltered0p09", "hltOverlapFilterIsoMu21MediumCombinedIsoPFTau32Reg"),
+        path2 = cms.vstring ("hltPFTau32TrackPt1MediumCombinedIsolationL1HLTMatchedReg", "hltOverlapFilterIsoMu21MediumCombinedIsoPFTau32Reg"),
         leg1 = cms.int32(13),
         leg2 = cms.int32(15)
     )
