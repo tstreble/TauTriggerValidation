@@ -25,6 +25,7 @@
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include "DataFormats/L1Trigger/interface/Tau.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
 
 
 #include "tParameterSet.h"
@@ -87,12 +88,17 @@ class Ntuplizer : public edm::EDAnalyzer {
         Bool_t _isMatched;
         Bool_t _isOS;
         int _foundJet;
+        float _muonPt;
+        float _muonEta;
+        float _muonPhi;
+        int _Nvtx;
 
         edm::EDGetTokenT<pat::MuonRefVector>  _muonsTag;
         edm::EDGetTokenT<pat::TauRefVector>   _tauTag;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> _triggerObjects;
         edm::EDGetTokenT<edm::TriggerResults> _triggerBits;
         edm::EDGetTokenT<l1t::TauBxCollection> _L1TauTag  ;
+        edm::EDGetTokenT<std::vector<reco::Vertex>> _VtxTag;
 
         //!Contains the parameters
         tVParameterSet _parameters;
@@ -122,7 +128,8 @@ _muonsTag       (consumes<pat::MuonRefVector>                     (iConfig.getPa
 _tauTag         (consumes<pat::TauRefVector>                      (iConfig.getParameter<edm::InputTag>("taus"))),
 _triggerObjects (consumes<pat::TriggerObjectStandAloneCollection> (iConfig.getParameter<edm::InputTag>("triggerSet"))),
 _triggerBits    (consumes<edm::TriggerResults>                    (iConfig.getParameter<edm::InputTag>("triggerResultsLabel"))),
-_L1TauTag       (consumes<l1t::TauBxCollection>                   (iConfig.getParameter<edm::InputTag>("L1Tau")))
+_L1TauTag       (consumes<l1t::TauBxCollection>                   (iConfig.getParameter<edm::InputTag>("L1Tau"))),
+_VtxTag         (consumes<std::vector<reco::Vertex>>              (iConfig.getParameter<edm::InputTag>("Vertexes")))
 {
     this -> _treeName = iConfig.getParameter<std::string>("treeName");
     this -> _processName = iConfig.getParameter<edm::InputTag>("triggerResultsLabel");
@@ -215,6 +222,9 @@ void Ntuplizer::beginJob()
     this -> _tree -> Branch("tauPt",  &_tauPt,  "tauPt/F");
     this -> _tree -> Branch("tauEta", &_tauEta, "tauEta/F");
     this -> _tree -> Branch("tauPhi", &_tauPhi, "tauPhi/F");
+    this -> _tree -> Branch("muonPt",  &_muonPt,  "muonPt/F");
+    this -> _tree -> Branch("muonEta", &_muonEta, "muonEta/F");
+    this -> _tree -> Branch("muonPhi", &_muonPhi, "muonPhi/F");
     this -> _tree -> Branch("hltPt",  &_hltPt,  "hltPt/F");
     this -> _tree -> Branch("hltEta", &_hltEta, "hltEta/F");
     this -> _tree -> Branch("hltPhi", &_hltPhi, "hltPhi/F");
@@ -228,6 +238,7 @@ void Ntuplizer::beginJob()
     this -> _tree -> Branch("isMatched", &_isMatched, "isMatched/O");
     this -> _tree -> Branch("isOS", &_isOS, "isOS/O");
     this -> _tree -> Branch("foundJet", &_foundJet, "foundJet/I");
+    this -> _tree -> Branch("Nvtx", &_Nvtx, "Nvtx/I");
 
     return;
 }
@@ -260,12 +271,13 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     edm::Handle<pat::TauRefVector>  tauHandle;
     edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
     edm::Handle<edm::TriggerResults> triggerBits;
+    edm::Handle<std::vector<reco::Vertex> >  vertexes;
 
     iEvent.getByToken(this -> _muonsTag, muonHandle);
     iEvent.getByToken(this -> _tauTag,   tauHandle);
     iEvent.getByToken(this -> _triggerObjects, triggerObjects);
     iEvent.getByToken(this -> _triggerBits, triggerBits);
-
+    iEvent.getByToken(this -> _VtxTag,vertexes);
 
 //! TagAndProbe on HLT taus
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
@@ -273,6 +285,7 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     const pat::MuonRef muon = (*muonHandle)[0] ;
 
     this -> _isOS = (muon -> charge() / tau -> charge() < 0) ? true : false;
+
 
     this -> _tauTriggerBitSet.reset();
 
@@ -344,6 +357,12 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     this -> _tauPt = tau -> pt();
     this -> _tauEta = tau -> eta();
     this -> _tauPhi = tau -> phi();
+
+    this -> _muonPt=muon->pt();
+    this -> _muonEta=muon->eta();
+    this -> _muonPhi=muon->phi();
+
+    this -> _Nvtx = vertexes->size();
 
     //float deltaPt = this -> _hltPt - this -> _tauPt;
     //if (this -> _foundJet > 1 ) std::cout << "deltaPt: " << deltaPt << " con foundJet " << this -> _foundJet << " hltPt " << this -> _hltPt << endl;
