@@ -1,9 +1,9 @@
 # TauTriggerValidation
 
 ```
-cmsrel CMSSW_8_0_5
-cd CMSSW_8_0_5/src
+cmsrel CMSSW_9_2_12
+cd CMSSW_9_2_12/src
 cmsenv
 git clone https://github.com/cms-tau-pog/TauTriggerValidation
-scram b -j4
+scram b -j 4
 ```

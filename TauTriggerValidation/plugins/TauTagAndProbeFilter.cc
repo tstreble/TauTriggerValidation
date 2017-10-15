@@ -52,8 +52,9 @@ TauTagAndProbeFilter::~TauTagAndProbeFilter()
 
 bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iSetup)
 {
-    auto_ptr<pat::MuonRefVector> resultMuon ( new pat::MuonRefVector );
-    auto_ptr<pat::TauRefVector>  resultTau  ( new pat::TauRefVector  );
+
+    std::unique_ptr<pat::MuonRefVector> resultMuon ( new pat::MuonRefVector );
+    std::unique_ptr<pat::TauRefVector>  resultTau  ( new pat::TauRefVector  );
 
     // ---------------------   search for the tag in the event --------------------
     Handle<pat::MuonRefVector> muonHandle;
@@ -62,13 +63,6 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
     // reject events with more than 1 mu in the event (reject DY)
     // or without mu (should not happen in SingleMu dataset)
     if (muonHandle->size() != 1) return false;
-
-    // for loop is now dummy, leaving it for debug
-    // for (size_t imu = 0; imu < muonHandle->size(); ++imu )
-    // {
-    //     const pat::MuonRef mu = (*muonHandle)[imu] ;
-    //     cout << "### FILTERED MUON PT: " << mu->pt() << endl;
-    // }
 
     const pat::MuonRef mu = (*muonHandle)[0] ;
 
@@ -84,8 +78,6 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
     iEvent.getByToken (_tausTag, tauHandle);
     if (tauHandle->size() < 1) return false;
 
-    //vector<pair<float, int>> tausIdxPtVecSS;
-    //vector<pair<float, int>> tausIdxPtVecOS;
     vector<pair<float, int>> tausIdxPtVec;
     for (uint itau = 0; itau < tauHandle->size(); ++itau)
     {
@@ -93,21 +85,6 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
         math::XYZTLorentzVector pSum = mu->p4() + tau->p4();
         if (pSum.mass() <= 40 || pSum.mass() >= 80) continue; // visible mass in (40, 80)
         if (deltaR(*tau, *mu) < 0.5) continue;
-
-        // max pt
-//        if (mu -> charge() / tau -> charge() > 0 ){
-//            tausIdxPtVecSS.push_back(make_pair(tau -> pt(), itau));
-//        } else {
-//             tausIdxPtVecOS.push_back(make_pair(tau -> pt(), itau));
-//        }
-
-        // min iso
-        //float isoMVA = tau->tauID("byIsolationMVArun2v1DBoldDMwLTraw");
-        //if (mu -> charge() / tau -> charge() > 0 ){
-        //    tausIdxPtVecSS.push_back(make_pair(isoMVA, itau));
-        //} else {
-        //    tausIdxPtVecOS.push_back(make_pair(isoMVA, itau));
-        //}
 
         // min iso
         float isoMVA = tau->tauID("byIsolationMVArun2v1DBoldDMwLTraw");
@@ -118,22 +95,6 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
 
     pat::TauRef tau;
 
-    /*
-    if (tausIdxPtVecOS.size() != 0)
-    {
-        if (tausIdxPtVecOS.size() > 1) sort (tausIdxPtVecOS.begin(), tausIdxPtVecOS.end()); // will be sorted by first idx i.e. highest pt
-        // int tauIdx = tausIdxPtVecOS.back().second; // max pt
-        int tauIdx = tausIdxPtVecOS.at(0).second; // min iso
-        tau = (*tauHandle)[tauIdx];
-    } else if (tausIdxPtVecSS.size() != 0 )
-    {
-        if (tausIdxPtVecSS.size() > 1) sort (tausIdxPtVecSS.begin(), tausIdxPtVecSS.end()); // will be sorted by first idx i.e. highest pt
-        // int tauIdx = tausIdxPtVecSS.back().second; // max pt
-        int tauIdx = tausIdxPtVecSS.at(0).second; // min iso
-        tau = (*tauHandle)[tauIdx];
-    } else return false;//They are both 0!
-    */
-
     if (tausIdxPtVec.size() == 0) return false; //No tau found
     if (tausIdxPtVec.size() > 1) sort (tausIdxPtVec.begin(), tausIdxPtVec.end()); //Sort if multiple taus
     int tauIdx = tausIdxPtVec.back().second; // min iso --> max MVA score
@@ -141,8 +102,8 @@ bool TauTagAndProbeFilter::filter(edm::Event & iEvent, edm::EventSetup const& iS
 
     resultTau->push_back (tau);
     resultMuon->push_back (mu);
-    iEvent.put(resultMuon);
-    iEvent.put(resultTau);
+    iEvent.put(std::move(resultMuon));
+    iEvent.put(std::move(resultTau));
 
     return true;
 }
