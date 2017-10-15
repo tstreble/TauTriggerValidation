@@ -3,6 +3,11 @@ import FWCore.PythonUtilities.LumiList as LumiList
 import FWCore.ParameterSet.Config as cms
 process = cms.Process("TagAndProbe")
 
+isMC = True
+useGenMatch = True
+
+
+
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 
 #### handling of cms line options for tier3 submission
@@ -21,29 +26,30 @@ options.register ('JSONfile',
                   "JSON file (empty for no JSON)")
 options.outputFile = 'NTuple.root'
 options.inputFiles = []
-options.maxEvents  = -999
+options.maxEvents  = 10
 options.parseArguments()
 
 
 from Configuration.AlCa.autoCond import autoCond
-process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v8'
-process.load('TauTriggerValidation.TauTriggerValidation.tagAndProbe_cff')
-process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(
-       # '/store/mc/RunIISpring16MiniAODv2/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/MINIAODSIM/PUSpring16RAWAODSIM_reHLT_80X_mcRun2_asymptotic_v14-v1/40000/00200284-F15C-E611-AA9B-002590574776.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/082EC2A0-4C28-E611-BC61-02163E014412.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/1014078C-4C28-E611-85FB-02163E0141C1.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/203E5176-4C28-E611-B4F8-02163E014743.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/32508866-4C28-E611-A38D-02163E011BAF.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/44AF1068-4C28-E611-80D0-02163E01367B.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/5AF4B08A-4C28-E611-AEC9-02163E01342C.root',
-        # '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/6E3FD070-4C28-E611-9A1E-02163E011DC7.root',
-        '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/7005DB70-4C28-E611-8628-02163E0144DD.root',
-        '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/7C2CB76B-4C28-E611-8D90-02163E01467F.root',
-        '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/274/199/00000/86B68469-4C28-E611-92A6-02163E01419C.root',
-        '/store/data/Run2016B/SingleMuon/MINIAOD/PromptReco-v2/000/275/125/00000/24FC42B2-8036-E611-B42D-02163E012BD1.root'
-    )
-)
+
+if not isMC:
+    process.GlobalTag.globaltag = '92X_dataRun2_HLT_v7'
+    process.load('TauTriggerValidation.TauTriggerValidation.tagAndProbe_cff')
+    process.source = cms.Source("PoolSource",
+                                fileNames = cms.untracked.vstring(
+                                   '/store/data/Run2017B/SingleMuon/RAW-RECO/MuTau-PromptReco-v1/000/297/488/00000/5CA074E9-C45B-E711-9BDD-02163E0133FE.root'
+                                   )
+                                )
+
+else:
+    process.GlobalTag.globaltag = '92X_upgrade2017_realistic_v12'
+    process.load('TauTriggerValidation.TauTriggerValidation.MCanalysis_cff')
+    process.source = cms.Source("PoolSource",
+                                fileNames = cms.untracked.vstring(
+                                    '/store/mc/RunIISummer17MiniAOD/VBFHToTauTau_M125_13TeV_powheg_pythia8/MINIAODSIM/NZSFlatPU28to62_HIG07_92X_upgrade2017_realistic_v10-v1/70000/0080A67C-FBA4-E711-A8FE-00259029E84C.root'
+                                    )
+                                )
+
 
 if options.JSONfile:
     print "Using JSON: " , options.JSONfile
@@ -61,6 +67,9 @@ if options.maxEvents >= -1:
 if options.skipEvents >= 0:
     process.source.skipEvents = cms.untracked.uint32(options.skipEvents)
 
+
+if isMC and not useGenMatch:
+    process.Ntuplizer.taus = cms.InputTag("goodTaus")
 
 process.p = cms.Path(
     process.TAndPseq

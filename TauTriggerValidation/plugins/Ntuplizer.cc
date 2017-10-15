@@ -75,19 +75,15 @@ class Ntuplizer : public edm::EDAnalyzer {
         float _tauPt;
         float _tauEta;
         float _tauPhi;
-        float _hltPt;
-        float _hltEta;
-        float _hltPhi;
+        vector<float> _hltPt;
+        vector<float> _hltEta;
+        vector<float> _hltPhi;
         int _l1tQual;
         float _l1tPt;
         float _l1tEta;
         float _l1tPhi;
         int _l1tIso;
-        Bool_t _hasTriggerMuonType;
-        Bool_t _hasTriggerTauType;
-        Bool_t _isMatched;
         Bool_t _isOS;
-        int _foundJet;
         float _muonPt;
         float _muonEta;
         float _muonPhi;
@@ -196,16 +192,19 @@ void Ntuplizer::Initialize() {
     this -> _runNumber = 0;
     this -> _lumi = 0;
     this -> _tauPt = -1.;
-    this -> _isMatched = false;
-    this -> _hltPt = -1;
-    this -> _hltEta = 666;
-    this -> _hltPhi = 666;
+    this -> _tauEta = -999.;
+    this -> _tauPhi = -999.;
+    this -> _muonPt = -1.;
+    this -> _muonEta = -1.;
+    this -> _muonPhi = -1.;
+    this -> _hltPt.clear();
+    this -> _hltEta.clear();
+    this -> _hltPhi.clear();
     this -> _l1tPt = -1;
-    this -> _l1tEta = 666;
-    this -> _l1tPhi = 666;
+    this -> _l1tEta = -999;
+    this -> _l1tPhi = -999;
     this -> _l1tQual = -1;
     this -> _l1tIso = -1;
-    this -> _foundJet = 0;
 }
 
 
@@ -225,19 +224,15 @@ void Ntuplizer::beginJob()
     this -> _tree -> Branch("muonPt",  &_muonPt,  "muonPt/F");
     this -> _tree -> Branch("muonEta", &_muonEta, "muonEta/F");
     this -> _tree -> Branch("muonPhi", &_muonPhi, "muonPhi/F");
-    this -> _tree -> Branch("hltPt",  &_hltPt,  "hltPt/F");
-    this -> _tree -> Branch("hltEta", &_hltEta, "hltEta/F");
-    this -> _tree -> Branch("hltPhi", &_hltPhi, "hltPhi/F");
+    this -> _tree -> Branch("hltPt",  &_hltPt);
+    this -> _tree -> Branch("hltEta", &_hltEta);
+    this -> _tree -> Branch("hltPhi", &_hltPhi);
     this -> _tree -> Branch("l1tPt",  &_l1tPt,  "l1tPt/F");
     this -> _tree -> Branch("l1tEta", &_l1tEta, "l1tEta/F");
     this -> _tree -> Branch("l1tPhi", &_l1tPhi, "l1tPhi/F");
     this -> _tree -> Branch("l1tQual", &_l1tQual, "l1tQual/I");
     this -> _tree -> Branch("l1tIso", &_l1tIso, "l1tIso/I");
-    this -> _tree -> Branch("hasTriggerMuonType", &_hasTriggerMuonType, "hasTriggerMuonType/O");
-    this -> _tree -> Branch("hasTriggerTauType", &_hasTriggerTauType, "hasTriggerTauType/O");
-    this -> _tree -> Branch("isMatched", &_isMatched, "isMatched/O");
     this -> _tree -> Branch("isOS", &_isOS, "isOS/O");
-    this -> _tree -> Branch("foundJet", &_foundJet, "foundJet/I");
     this -> _tree -> Branch("Nvtx", &_Nvtx, "Nvtx/I");
 
     return;
@@ -279,56 +274,55 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     iEvent.getByToken(this -> _triggerBits, triggerBits);
     iEvent.getByToken(this -> _VtxTag,vertexes);
 
-//! TagAndProbe on HLT taus
+    //! TagAndProbe on HLT taus
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     const pat::TauRef tau = (*tauHandle)[0] ;
     const pat::MuonRef muon = (*muonHandle)[0] ;
 
     this -> _isOS = (muon -> charge() / tau -> charge() < 0) ? true : false;
 
-
     this -> _tauTriggerBitSet.reset();
 
+    unsigned int x = 0;
+    for (const tParameterSet& parameter : this -> _parameters)
+      {       
+	float hlt_pt = -1;
+	float hlt_eta = -999;
+	float hlt_phi = -999;
 
-
-    for (pat::TriggerObjectStandAlone  obj : *triggerObjects)
-    {
-        const float dR = deltaR (*tau, obj);
-        if ( dR < 0.5)
-        {
-            this -> _isMatched = true;
-            this -> _hasTriggerTauType = obj.hasTriggerObjectType(trigger::TriggerTau);
-            this -> _hasTriggerMuonType = obj.hasTriggerObjectType(trigger::TriggerMuon);
-
-            obj.unpackPathNames(names);
-            const edm::TriggerNames::Strings& triggerNames = names.triggerNames();
-            //Looking for the path
-            unsigned int x = 0;
-            bool foundTrigger = false;
-            for (const tParameterSet& parameter : this -> _parameters)
-            {
+	for (pat::TriggerObjectStandAlone  obj : *triggerObjects)
+	  {
+	    const float dR = deltaR (*tau, obj);
+	    if ( dR < 0.5)
+	      {
+		
+		obj.unpackPathNames(names);
+		const edm::TriggerNames::Strings& triggerNames = names.triggerNames(); 
+                
                 if ((parameter.hltPathIndex >= 0)&&(obj.hasPathName(triggerNames[parameter.hltPathIndex], true, false)))
-                {
-                    foundTrigger = true;
+		  {                    
                     //Path found, now looking for the label 1, if present in the parameter set
-                    //std::cout << "==== FOUND PATH " << triggerNames[parameter.hltPathIndex] << " ====" << std::endl;
                     //Retrieving filter list for the event
                     const std::vector<std::string>& filters = (parameter.leg1 == 15)? (parameter.hltFilters1):(parameter.hltFilters2);
                     if (this -> hasFilters(obj, filters))
                     {
-                        //std::cout << "#### FOUND TAU WITH HLT PATH " << x << " ####" << std::endl;
-                        this -> _hltPt = obj.pt();
-                        this -> _hltEta = obj.eta();
-                        this -> _hltPhi = obj.phi();
+                        hlt_pt = obj.pt();
+                        hlt_eta = obj.eta();
+                        hlt_phi = obj.phi();
                         this -> _tauTriggerBitSet[x] = true;
-                        //std::cout << this -> _tauTriggerBitSet.to_string() << std::endl;
                     }
-                }
-                x++;
-            }
-            if (foundTrigger) this -> _foundJet++;
-        }
-    }
+		  }
+
+	      } //If matched           
+	  }//Loop over trigger objects
+
+	this -> _hltPt.push_back(hlt_pt);
+	this -> _hltEta.push_back(hlt_eta);
+	this -> _hltPhi.push_back(hlt_phi);
+
+	x++;
+
+      }//Loop over trigger paths
 
 
     //! TagAndProbe on L1T taus
@@ -336,15 +330,14 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
     edm::Handle< BXVector<l1t::Tau> >  L1TauHandle;
     iEvent.getByToken(_L1TauTag, L1TauHandle);
 
-    float minDR = 0.5; //Uncomment for new match algo
+    float minDR = 0.5;
 
     for (l1t::TauBxCollection::const_iterator bx0TauIt = L1TauHandle->begin(0); bx0TauIt != L1TauHandle->end(0) ; bx0TauIt++)
     {
         const float dR = deltaR(*tau, *bx0TauIt);
-        if (dR < minDR) //Uncomment for new match algo
-        //if (dR < 0.5) //Uncomment for old match algo
+        if (dR < minDR)
         {
-            minDR = dR; //Uncomment for new match algo
+   	    minDR = dR;
             const l1t::Tau& l1tTau = *bx0TauIt;
             this -> _l1tPt = l1tTau.pt();
             this -> _l1tEta = l1tTau.eta();
@@ -364,11 +357,8 @@ void Ntuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
 
     this -> _Nvtx = vertexes->size();
 
-    //float deltaPt = this -> _hltPt - this -> _tauPt;
-    //if (this -> _foundJet > 1 ) std::cout << "deltaPt: " << deltaPt << " con foundJet " << this -> _foundJet << " hltPt " << this -> _hltPt << endl;
-
     this -> _tauTriggerBits = this -> _tauTriggerBitSet.to_ulong();
-    //std::cout << "++++++++++ FILL ++++++++++" << std::endl;
+
     this -> _tree -> Fill();
 
 }
@@ -381,12 +371,9 @@ bool Ntuplizer::hasFilters(const pat::TriggerObjectStandAlone&  obj , const std:
         //Looking for matching filters
         bool found = false;
         for (const std::string& label : eventLabels)
-        {
-            //if (label == std::string("hltOverlapFilterIsoMu17MediumIsoPFTau40Reg"))
+        {           
             if (label == filter)
             {
-
-                //std::cout << "#### FOUND FILTER " << label << " == " << filter << " ####" << std::endl;
                 found = true;
             }
         }
